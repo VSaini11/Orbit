@@ -9,13 +9,7 @@ export function Footer() {
     <footer className="pt-60 relative overflow-hidden bg-transparent mt-20">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 relative z-10">
         {/* Links Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-44">
-          <div className="space-y-6">
-            <h4 className="text-[14px] font-semibold text-white/90 tracking-wide uppercase">Product</h4>
-            <ul className="space-y-3 text-[13px] text-white/40 font-medium">
-              <li><a href="/upload" className="hover:text-white transition-colors">AI Builder</a></li>
-            </ul>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-12 mb-44">
           <div className="space-y-6">
             <h4 className="text-[14px] font-semibold text-white/90 tracking-wide uppercase">Company</h4>
             <ul className="space-y-3 text-[13px] text-white/40 font-medium">
