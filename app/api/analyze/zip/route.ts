@@ -32,22 +32,40 @@ export async function POST(req: NextRequest) {
       if (entry.isDirectory) continue;
       
       const fileName = entry.entryName;
-      // Skip node_modules, .git, etc.
-      if (fileName.includes('node_modules/') || fileName.includes('.git/') || fileName.includes('.next/')) continue;
+      // Skip heavy dependencies, build artifacts, and lockfiles
+      const skipPatterns = [
+        'node_modules/', 
+        '.git/', 
+        '.next/', 
+        'package-lock.json', 
+        'yarn.lock', 
+        'pnpm-lock.yaml',
+        '.svg',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.ico',
+        '.woff',
+        '.woff2',
+        'dist/',
+        'build/'
+      ];
+
+      if (skipPatterns.some(pattern => fileName.includes(pattern))) continue;
       
       // Only take relevant code files
-      if (
+      const isCodeFile = 
         fileName.endsWith('.ts') || 
         fileName.endsWith('.tsx') || 
         fileName.endsWith('.js') || 
         fileName.endsWith('.jsx') || 
-        fileName.endsWith('.json') ||
-        fileName.endsWith('.css')
-      ) {
+        fileName.endsWith('.css');
+
+      if (isCodeFile) {
         // Limit number of files to avoid hitting AI context limits for this demo
         if (codeFiles.length < 50) {
           const content = entry.getData().toString('utf8');
-          if (content.length < 50000) { // Skip extremely large files
+          if (content.length < 50000) { // Skip extremely large individual files
             codeFiles.push({ path: fileName, content });
           }
         }

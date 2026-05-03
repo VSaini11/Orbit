@@ -65,6 +65,7 @@ export function AnalysisExplorer({ items, type, repoUrl, projectName }: Analysis
             projectName,
             repoUrl,
             file: item.file,
+            codeSnippet: item.codeSnippet,
             fixedCode: item.fixedCode || item.recommendation || item.suggestion || item.suggested,
             title: item.title,
             description: item.description

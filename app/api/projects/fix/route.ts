@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { projectName, repoUrl, file, fixedCode, title, description } = await req.json();
+    const { projectName, repoUrl, file, codeSnippet, fixedCode, title, description } = await req.json();
 
     if (!GITHUB_TOKEN) {
       return NextResponse.json({ error: 'GitHub Token not configured' }, { status: 500 });
@@ -55,7 +55,8 @@ export async function POST(req: Request) {
       sha: latestCommitSha,
     });
 
-    // 4. Get the current file to get its SHA (needed for update)
+    // 4. Get the current file content to perform patching
+    let currentFileContent = '';
     let currentFileSha;
     try {
       const { data: fileData } = await octokit.rest.repos.getContent({
@@ -64,20 +65,54 @@ export async function POST(req: Request) {
         path: file,
         ref: branchName,
       });
-      if (!Array.isArray(fileData)) {
+      
+      if (!Array.isArray(fileData) && 'content' in fileData) {
         currentFileSha = fileData.sha;
+        currentFileContent = Buffer.from(fileData.content, 'base64').toString('utf8');
       }
     } catch (e) {
-      console.log('File might be new or not found, continuing without SHA');
+      console.log('File fetch failed, might be a new file');
     }
 
-    // 5. Update the file on the new branch
+    // 5. Intelligent Patching
+    let finalContent = fixedCode; // Default to overwriting if patching fails or isn't possible
+
+    if (currentFileContent && codeSnippet) {
+      console.log('Attempting to patch file...');
+      
+      // Try exact match first
+      if (currentFileContent.includes(codeSnippet)) {
+        finalContent = currentFileContent.replace(codeSnippet, fixedCode);
+        console.log('Exact match found and replaced.');
+      } else {
+        // Try fuzzy match (trimming whitespace and newlines)
+        const normalizedSnippet = codeSnippet.trim();
+        const normalizedFile = currentFileContent;
+        
+        if (normalizedFile.includes(normalizedSnippet)) {
+          finalContent = normalizedFile.replace(normalizedSnippet, fixedCode);
+          console.log('Fuzzy match (trimmed) found and replaced.');
+        } else {
+          console.warn('Code snippet not found in file content. Falling back to safe error.');
+          return NextResponse.json({ 
+            error: 'Could not find the original code block to replace. This usually happens if the file has changed since the analysis. Please try re-analyzing the project.' 
+          }, { status: 400 });
+        }
+      }
+    } else if (currentFileContent && !codeSnippet) {
+      // If we have the file but no snippet, it's dangerous to overwrite
+      return NextResponse.json({ 
+        error: 'Missing code context for patching. Please re-run the analysis to get updated snippets.' 
+      }, { status: 400 });
+    }
+
+    // 6. Update the file on the new branch with patched content
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
       path: file,
       message: `Orbit AI: ${title}`,
-      content: Buffer.from(fixedCode).toString('base64'),
+      content: Buffer.from(finalContent).toString('base64'),
       branch: branchName,
       sha: currentFileSha,
     });

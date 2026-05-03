@@ -40,13 +40,33 @@ export async function POST(req: NextRequest) {
 
     const codeFiles: CodeFile[] = [];
     
+    const skipPatterns = [
+      'node_modules/', 
+      '.git/', 
+      '.next/', 
+      'package-lock.json', 
+      'yarn.lock', 
+      'pnpm-lock.yaml',
+      '.svg',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.ico',
+      'dist/',
+      'build/'
+    ];
+
     // Select key files for analysis
-    const relevantFiles = tree.tree.filter((item: any) => 
-      item.type === 'blob' && 
-      (item.path.endsWith('.ts') || item.path.endsWith('.tsx') || item.path.endsWith('.js') || item.path.endsWith('.json')) &&
-      !item.path.includes('node_modules/') && 
-      !item.path.includes('.git/')
-    ).slice(0, 30); // Limit to 30 files for demo
+    const relevantFiles = tree.tree.filter((item: any) => {
+      const isFile = item.type === 'blob';
+      const isRelevantExtension = item.path.endsWith('.ts') || 
+                                  item.path.endsWith('.tsx') || 
+                                  item.path.endsWith('.js') || 
+                                  item.path.endsWith('.jsx');
+      const isSkipped = skipPatterns.some(pattern => item.path.includes(pattern));
+      
+      return isFile && isRelevantExtension && !isSkipped;
+    }).slice(0, 40); // Increased limit slightly since we're filtering better
 
     for (const file of relevantFiles) {
       const { data: contentData } = await octokit.rest.repos.getContent({

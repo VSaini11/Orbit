@@ -28,13 +28,14 @@ The response MUST strictly follow this JSON structure:
 }
 
 IMPORTANT: 
-1. For "codeSnippet", provide the ACTUAL original code that contains the issue. 
-2. For "fixedCode", provide the fully corrected code that should replace it. This will be used in a live refactoring simulation.
-3. Your ENTIRE response must be valid JSON. 
-4. DO NOT include any text outside of the JSON object. 
-5. In your JSON strings (like codeSnippet and fixedCode), ensure you PROPERLY ESCAPE backslashes as \\ and double quotes as \". 
-6. NEVER use single backslashes \ at the end of lines for continuation. Always use \n for newlines within strings.
-7. Ensure every single property name is enclosed in double quotes.
+1. For "codeSnippet", provide the EXACT original code block that contains the issue. Include enough surrounding lines (2-3 lines before and after) to ensure the snippet is UNIQUE within the file. This is CRITICAL for our patching engine to find the right location.
+2. For "fixedCode", provide the fully corrected code that should replace ONLY the "codeSnippet" part. Do not return the whole file here, just the replacement for the snippet.
+3. Ensure "fixedCode" maintains the exact indentation and style of the "codeSnippet".
+4. Your ENTIRE response must be valid JSON. 
+5. DO NOT include any text outside of the JSON object. 
+6. In your JSON strings (like codeSnippet and fixedCode), ensure you PROPERLY ESCAPE backslashes as \\ and double quotes as \". 
+7. NEVER use single backslashes \ at the end of lines for continuation. Always use \n for newlines within strings.
+8. Ensure every single property name is enclosed in double quotes.
 `;
 
 function sanitizeJsonString(str: string): string {
@@ -116,9 +117,19 @@ export async function analyzeCodebase(files: CodeFile[], projectName: string): P
     if (!GEMINI_API_KEY) throw new Error('Gemini API key is missing');
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    console.log(`Sending to Gemini. Prompt length: ${fullPrompt.length} chars`);
+    
+    // Safety check for total prompt size
+    let finalPrompt = fullPrompt;
+    const MAX_CHARS = 200000; // 200k characters is safe (~50k tokens)
+    
+    if (fullPrompt.length > MAX_CHARS) {
+      console.warn(`Prompt is too long (${fullPrompt.length} chars). Truncating to ${MAX_CHARS} chars.`);
+      finalPrompt = fullPrompt.slice(0, MAX_CHARS) + "\n\n[PROMPT TRUNCATED DUE TO SIZE]";
+    }
 
-    const result = await withRetry(() => model.generateContent(fullPrompt));
+    console.log(`Sending to Gemini. Total Payload: ${finalPrompt.length} chars`);
+
+    const result = await withRetry(() => model.generateContent(finalPrompt));
     const response = await result.response;
     const text = response.text();
 

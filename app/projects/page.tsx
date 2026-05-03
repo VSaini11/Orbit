@@ -1,10 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
-import { motion } from 'framer-motion';
-import { Plus, Folder, Calendar, ArrowRight, Loader2, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Plus, 
+  Folder, 
+  Calendar, 
+  ArrowRight, 
+  Loader2, 
+  Trash2, 
+  Search,
+  Github,
+  FileCode,
+  LayoutDashboard,
+  Sparkles,
+  Command
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 interface Project {
   _id: string;
@@ -18,33 +32,77 @@ interface Project {
   };
 }
 
-import { useSession } from 'next-auth/react';
-
 export default function ProjectsPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  // 1. Instant Load from Cache
   useEffect(() => {
+    const cached = localStorage.getItem('orbit_projects_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) setProjects(parsed);
+      } catch (e) {
+        console.error('Cache parse error:', e);
+      }
+    }
+    // Always trigger an initial fetch regardless of status to wake things up
     fetchProjects();
   }, []);
 
   const fetchProjects = async () => {
+    setIsSyncing(true);
     try {
       const response = await fetch('/api/projects');
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setProjects(data);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setProjects(data);
+          localStorage.setItem('orbit_projects_cache', JSON.stringify(data));
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
+      console.error('Fetch error:', error);
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   };
+
+  // 2. Navigation Wake-up
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) fetchProjects();
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    
+    // Periodically sync if status changes
+    if (status === 'authenticated') {
+      fetchProjects();
+    }
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [status]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleDeleteProject = async (id: string) => {
     if (!confirm('Are you sure you want to delete this project? This will also delete all analysis history.')) {
@@ -87,134 +145,183 @@ export default function ProjectsPage() {
     }
   };
 
+  const filteredProjects = projects.filter(p => 
+    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.latestAnalysis?.sourceName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-white selection:bg-white/10">
       <Navbar />
 
-      <main className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-4xl font-bold mb-2">
-              {session?.user?.name ? `Welcome, ${session.user.name.split(' ')[0]}` : 'My Projects'}
-            </h1>
-            <p className="text-muted-foreground">Manage and analyze your codebases.</p>
-          </motion.div>
+      <main className="relative pt-32 pb-24 px-6 sm:px-10 lg:px-16 max-w-7xl mx-auto z-10">
+        {/* Top Navigation / Breadcrumbs */}
+        <div 
+          className="flex items-center gap-2 text-[11px] font-bold text-white/20 mb-8 uppercase tracking-widest"
+        >
+          <span>Workspace</span>
+          <ArrowRight className="w-2.5 h-2.5" />
+          <span className="text-white/60">All Projects</span>
+        </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
+          <div
+            className="max-w-2xl space-y-4"
           >
-            <div className="flex gap-4">
-              {/* Simple inline form for project creation */}
-              <form onSubmit={handleCreateProject} className="flex gap-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
+              Hello, {session?.user?.name ? session.user.name.split(' ')[0] : 'Explorer'}.
+            </h1>
+            <p className="text-base text-white/40 leading-relaxed max-w-lg font-medium tracking-tight">
+              Manage your systems and architectural intelligence.
+            </p>
+          </div>
+
+          <div
+            className="flex flex-col gap-4 w-full lg:w-auto"
+          >
+            <form onSubmit={handleCreateProject} className="flex flex-col sm:flex-row gap-2 p-1 bg-white/[0.03] border border-white/10 rounded-[16px] backdrop-blur-xl shadow-xl">
+              <div className="relative flex-1 lg:w-64">
                 <input
                   type="text"
-                  placeholder="New Project Name"
-                  className="bg-card border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  placeholder="Create new project..."
+                  className="w-full bg-transparent border-none rounded-xl pl-4 pr-4 py-2.5 text-[14px] focus:ring-0 placeholder:text-white/20 transition-all font-medium"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   required
                 />
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Create
-                </button>
-              </form>
-            </div>
-          </motion.div>
+              </div>
+              <button
+                type="submit"
+                disabled={isCreating}
+                className="bg-white text-black px-5 py-2.5 rounded-[12px] text-[13px] font-bold hover:bg-white/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 shadow-lg"
+              >
+                {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Add System
+              </button>
+            </form>
+          </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        {/* Action Bar */}
+        <motion.div 
+          className="flex flex-col md:flex-row items-center gap-4 mb-8"
+        >
+          <div className="relative flex-1 w-full group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <input 
+              type="text"
+              placeholder="Filter by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white/[0.02] border border-white/5 rounded-lg pl-10 pr-6 py-2 text-[13px] font-medium focus:border-white/10 focus:bg-white/[0.04] transition-all outline-none"
+            />
           </div>
-        ) : projects.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20 border border-dashed border-border rounded-2xl bg-card/30"
-          >
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Folder className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No projects yet</h2>
-            <p className="text-muted-foreground mb-6">Create your first project to start analyzing code.</p>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project, index) => (
-              <motion.div
-                key={project._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className="group p-6 rounded-2xl border border-border bg-card/50 hover:bg-card hover:border-primary/50 transition-all duration-300"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Folder className="w-6 h-6 text-primary" />
-                  </div>
-                  <button 
-                    onClick={() => handleDeleteProject(project._id)}
-                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                    title="Delete Project"
+        </motion.div>
+
+        {/* Dashboard Content - prioritize showing cached projects */}
+        {projects.length > 0 ? (
+          <div className="relative">
+            {/* Subtle Syncing Indicator */}
+            <AnimatePresence>
+              {isSyncing && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute -top-12 right-0 flex items-center gap-2 text-[10px] font-bold text-white/20 tracking-widest uppercase"
+                >
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Syncing
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <AnimatePresence>
+                {filteredProjects.map((project, index) => (
+                  <motion.div
+                    key={project._id}
+                    className="group"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex flex-col gap-1 mb-6">
-                  <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{project.name}</h3>
-                  {project.latestAnalysis ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        project.latestAnalysis.sourceType === 'github' 
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                          : 'bg-primary/10 text-primary border border-primary/20'
-                      }`}>
-                        {project.latestAnalysis.sourceType}
+                  <div className="h-full flex flex-col p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all duration-300 shadow-lg relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 group-hover:bg-white/10 transition-all">
+                        {project.latestAnalysis?.sourceType === 'github' ? (
+                          <Github className="w-3.5 h-3.5 text-white/60" />
+                        ) : (
+                          <FileCode className="w-3.5 h-3.5 text-white/60" />
+                        )}
                       </div>
-                      <span className="text-xs text-muted-foreground truncate max-w-[150px] font-mono">
-                        {project.latestAnalysis.sourceName}
-                      </span>
+                      <button 
+                        onClick={() => handleDeleteProject(project._id)}
+                        className="p-1.5 text-white/10 hover:text-red-400 hover:bg-red-400/5 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {project.description || 'No analysis performed yet.'}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between pt-6 border-t border-border/50">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(project.createdAt).toLocaleDateString()}
+
+                    <div className="space-y-1 mb-4 flex-1">
+                      <h3 className="text-[15px] font-bold text-white tracking-tight leading-tight truncate group-hover:text-primary transition-colors">{project.name}</h3>
+                      {project.latestAnalysis ? (
+                        <div className="flex flex-col gap-1 pt-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[8px] font-mono font-bold text-white/20 tracking-wider">
+                              {project.latestAnalysis.sourceType.toUpperCase()}
+                            </span>
+                            <span className="text-[10px] text-white/20 truncate font-medium max-w-[100px]">
+                              {project.latestAnalysis.sourceName}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-white/20 font-medium leading-relaxed truncate">
+                          {project.description || 'Pending...'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5 mt-auto">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/10 uppercase tracking-widest">
+                        {new Date(project.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                      </div>
+                      
+                      <a
+                        href={project.latestAnalysis ? `/analysis?projectId=${project._id}` : `/upload?projectId=${project._id}`}
+                        className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full text-[11px] font-bold transition-all ${
+                          project.latestAnalysis 
+                            ? 'bg-white text-black hover:bg-white/90' 
+                            : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        {project.latestAnalysis ? 'Report' : 'Analyze'}
+                        <ArrowRight className="w-3 h-3" />
+                      </a>
+                    </div>
                   </div>
-                  {project.latestAnalysis ? (
-                    <a
-                      href={`/analysis?projectId=${project._id}`}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all"
-                    >
-                      View Report <ArrowRight className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <a
-                      href={`/upload?projectId=${project._id}`}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all"
-                    >
-                      Analyze <ArrowRight className="w-4 h-4" />
-                    </a>
-                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 border border-white/5 rounded-2xl bg-white/[0.01]">
+            {status === 'loading' && !isSyncing ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin text-white/10 mb-4" />
+                <p className="text-white/20 text-[10px] font-bold tracking-widest uppercase italic">Re-establishing Orbit</p>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mb-4 border border-white/10 text-white/20">
+                  <Folder className="w-5 h-5" />
                 </div>
-              </motion.div>
-            ))}
+                <h2 className="text-lg font-bold mb-1 tracking-tight text-white">No systems</h2>
+                <p className="text-white/40 mb-6 max-w-xs mx-auto text-xs font-medium text-center">
+                  Initialize your first project to begin.
+                </p>
+              </>
+            )}
           </div>
         )}
       </main>

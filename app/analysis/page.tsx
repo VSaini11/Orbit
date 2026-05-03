@@ -108,9 +108,6 @@ function AnalysisContent() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
               className="space-y-2"
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -133,8 +130,6 @@ function AnalysisContent() {
             </motion.div>
 
             <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
               className="flex gap-3"
             >
               <button className="p-3 rounded-xl border border-border bg-card/50 hover:bg-card transition-colors text-muted-foreground hover:text-foreground">
@@ -188,9 +183,6 @@ function AnalysisContent() {
 
           {activeTab === 'overview' && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
               className="space-y-12"
             >
               <AnalysisOverview data={{
@@ -214,9 +206,6 @@ function AnalysisContent() {
                   {analysisData.components.map((component, i) => (
                     <motion.div 
                       key={component.id} 
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05 }}
                       className="group p-6 rounded-2xl border border-border bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all relative overflow-hidden"
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl -mr-12 -mt-12 rounded-full group-hover:bg-primary/10 transition-colors" />

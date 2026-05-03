@@ -16,14 +16,14 @@ export async function GET() {
     
     const projects = await Project.find({ userId }).sort({ createdAt: -1 }).lean();
     
-    // Fetch latest analysis for each project to show source info
+    // Optimized: Fetch all projects and their latest analysis in parallel more efficiently
+    const Analysis = (await import('@/models/Analysis')).default;
     const projectsWithAnalysis = await Promise.all(projects.map(async (project) => {
-      const Analysis = (await import('@/models/Analysis')).default;
-      const latestAnalysis = await Analysis.findOne({ projectId: project._id }).sort({ createdAt: -1 }).select('sourceName sourceType createdAt').lean();
-      return {
-        ...project,
-        latestAnalysis
-      };
+      const latestAnalysis = await Analysis.findOne({ projectId: project._id })
+        .select('sourceName sourceType createdAt')
+        .sort({ createdAt: -1 })
+        .lean();
+      return { ...project, latestAnalysis };
     }));
 
     return NextResponse.json(projectsWithAnalysis);
