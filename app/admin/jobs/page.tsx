@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { motion } from 'framer-motion';
@@ -15,10 +16,17 @@ interface Job {
 }
 
 export default function AdminJobsPage() {
+  const pathname = usePathname();
   const [password, setPassword] = useState('');
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<Job[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const cached = localStorage.getItem('orbit_jobs_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [loading, setLoading] = useState(false);
   const [newJob, setNewJob] = useState({
     title: '',
     category: 'Engineering',
@@ -30,7 +38,10 @@ export default function AdminJobsPage() {
     try {
       const res = await fetch('/api/jobs');
       const data = await res.json();
-      setJobs(data);
+      if (Array.isArray(data)) {
+        setJobs(data);
+        localStorage.setItem('orbit_jobs_cache', JSON.stringify(data));
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -39,8 +50,15 @@ export default function AdminJobsPage() {
   };
 
   useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) fetchJobs();
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     fetchJobs();
-  }, []);
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [pathname]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

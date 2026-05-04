@@ -2,6 +2,7 @@
 
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import Link from 'next/link';
 import { SystemCard } from '@/components/SystemCard';
 import { motion } from 'framer-motion';
 import {
@@ -231,19 +232,19 @@ export default function FeaturesPage() {
             Start using Vyana Orbit today. Upload your codebase and get instant, intelligent analysis.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
+            <Link
               href="/upload"
               className="px-8 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors inline-flex items-center justify-center gap-2"
             >
               Get Started Free
               <span>→</span>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/docs"
               className="px-8 py-3 rounded-lg border border-border text-foreground font-medium hover:bg-card/50 transition-colors inline-flex items-center justify-center"
             >
               View Documentation
-            </a>
+            </Link>
           </div>
         </motion.div>
       </section>

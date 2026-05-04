@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { DemoBanner } from '@/components/DemoBanner';
 import { motion } from 'framer-motion';
-import { mockAnalysisData, getAnalysisSummary } from '@/lib/mockData';
+import { mockAnalysisData, getAnalysisSummary, type AnalysisResult } from '@/lib/mockData';
 import {
   SecurityVulnerabilityCard,
   CodeQualityCard,
@@ -20,6 +21,8 @@ import { BarChart3, Shield, Bug, Package, Zap, Code2, Eye, Download, Share2, Arr
 import { AnalysisOverview } from '@/components/AnalysisOverview';
 
 function AnalysisContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
 
@@ -27,10 +30,37 @@ function AnalysisContent() {
     'overview' | 'security' | 'quality' | 'dependencies' | 'performance' | 'upgrades' | 'ui'
   >('overview');
 
-  const [analysisData, setAnalysisData] = useState(mockAnalysisData);
+  const [analysisData, setAnalysisData] = useState<AnalysisResult>(() => {
+    if (typeof window === 'undefined') return mockAnalysisData;
+    try {
+      const saved = localStorage.getItem('latestAnalysis');
+      return saved ? JSON.parse(saved) : mockAnalysisData;
+    } catch { return mockAnalysisData; }
+  });
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Orbit Analysis: ${analysisData.projectName}`,
+          text: `Check out the security and quality analysis for ${analysisData.projectName}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share failed:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -69,10 +99,18 @@ function AnalysisContent() {
       setIsLoading(false);
     };
 
-    loadAnalysis();
-  }, [projectId]);
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) loadAnalysis();
+    };
+    window.addEventListener('pageshow', handlePageShow);
 
-  if (isLoading && projectId) {
+    loadAnalysis();
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [projectId, pathname]);
+
+  // Only show blank loading state if we have no data at all
+  if (isLoading && projectId && !analysisData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -111,18 +149,18 @@ function AnalysisContent() {
               className="space-y-2"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider">
-                  <Zap className="w-3 h-3" /> Analysis Complete
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider">
+                  <Zap className="w-2.5 h-2.5" /> Analysis Complete
                 </div>
                 {analysisData.tokenUsage && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border/50 text-muted-foreground text-[10px] font-bold uppercase tracking-wider" title={`Input: ${analysisData.tokenUsage.input} | Output: ${analysisData.tokenUsage.output}`}>
-                    <Terminal className="w-3 h-3 text-primary" />
-                    {analysisData.tokenUsage.total.toLocaleString()} Tokens Used
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground text-[9px] font-bold uppercase tracking-wider" title={`Input: ${analysisData.tokenUsage.input} | Output: ${analysisData.tokenUsage.output}`}>
+                    <Terminal className="w-2.5 h-2.5 text-primary" />
+                    {analysisData.tokenUsage.total.toLocaleString()} Tokens
                   </div>
                 )}
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">Orbit Analysis Report</h1>
-              <p className="text-muted-foreground flex items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Orbit Analysis Report</h1>
+              <p className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
                 <span className="font-medium text-foreground">{analysisData.projectName}</span>
                 <span className="opacity-30">•</span>
                 <span>{mounted ? new Date(analysisData.timestamp).toLocaleDateString(undefined, { dateStyle: 'long' }) : '---'}</span>
@@ -130,19 +168,24 @@ function AnalysisContent() {
             </motion.div>
 
             <motion.div 
-              className="flex gap-3"
+              className="flex gap-2 print:hidden"
             >
-              <button className="p-3 rounded-xl border border-border bg-card/50 hover:bg-card transition-colors text-muted-foreground hover:text-foreground">
-                <Share2 className="w-5 h-5" />
+              <button 
+                onClick={handleShare}
+                className="p-2.5 rounded-xl border border-border bg-card/50 hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <Share2 className="w-4 h-4" />
               </button>
-              <button className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
-                <Download className="w-5 h-5" /> Export PDF
+              <button 
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+              >
+                <Download className="w-4 h-4" /> Export PDF
               </button>
             </motion.div>
           </div>
 
-          {/* Demo Banner */}
-          <DemoBanner />
+
 
           <div className="sticky top-20 z-40 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4">
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -153,7 +196,7 @@ function AnalysisContent() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                    className={`relative px-5 py-2.5 flex items-center gap-2 whitespace-nowrap rounded-xl transition-all duration-300 ${
+                    className={`relative px-4 py-2 flex items-center gap-2 whitespace-nowrap rounded-xl transition-all duration-300 ${
                       isActive
                         ? 'text-primary-foreground font-bold'
                         : 'text-muted-foreground hover:text-foreground hover:bg-card'
@@ -215,7 +258,7 @@ function AnalysisContent() {
                         </div>
                         <h3 className="font-bold text-foreground">{component.name}</h3>
                       </div>
-                      <p className="text-xs text-muted-foreground font-mono mb-4 bg-muted/30 p-2 rounded truncate">
+                      <p className="text-[10px] text-muted-foreground font-mono mb-4 bg-muted/30 p-2 rounded truncate break-all">
                         {component.file}
                       </p>
                       <div className="flex items-center justify-between text-xs text-muted-foreground pt-4 border-t border-border/50">
@@ -296,21 +339,21 @@ function AnalysisContent() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-3 pt-6"
           >
-            <a
+            <Link
               href="/preview"
               className="flex-1 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors text-center"
             >
               View Improvements & Diffs
-            </a>
+            </Link>
             <button className="flex-1 px-6 py-3 rounded-lg border border-border text-foreground font-medium hover:bg-card/50 transition-colors">
               Download Full Report
             </button>
-            <a
+            <Link
               href="/upload"
               className="flex-1 px-6 py-3 rounded-lg border border-border text-foreground font-medium hover:bg-card/50 transition-colors text-center"
             >
               Upload New Code
-            </a>
+            </Link>
           </motion.div>
         </div>
       </section>

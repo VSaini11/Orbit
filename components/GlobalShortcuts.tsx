@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { useWaitlist } from './WaitlistContext';
+
 
 export function GlobalShortcuts() {
   const router = useRouter();
-  const { openWaitlist } = useWaitlist();
   const [keyBuffer, setKeyBuffer] = useState<string>('');
 
   useEffect(() => {
@@ -24,7 +23,7 @@ export function GlobalShortcuts() {
       // 1. Meta + J logic - Now opens Waitlist Modal
       if (e.ctrlKey && e.key.toLowerCase() === 'j') {
         e.preventDefault();
-        openWaitlist();
+        router.push('/projects');
         return;
       }
 

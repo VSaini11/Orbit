@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,33 +35,35 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Hydration-safe cache loading
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('orbit_projects_cache');
+      if (cached) {
+        setProjects(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error('Failed to load cache:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // 1. Instant Load from Cache
-  useEffect(() => {
-    const cached = localStorage.getItem('orbit_projects_cache');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) setProjects(parsed);
-      } catch (e) {
-        console.error('Cache parse error:', e);
-      }
-    }
-    // Always trigger an initial fetch regardless of status to wake things up
-    fetchProjects();
-  }, []);
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async (showFullLoader = false) => {
+    if (showFullLoader) setIsLoading(true);
     setIsSyncing(true);
     try {
       const response = await fetch('/api/projects');
@@ -75,23 +79,49 @@ export default function ProjectsPage() {
     } finally {
       setIsLoading(false);
       setIsSyncing(false);
+      setInitialLoadDone(true);
     }
-  };
+  }, []); // Remove projects.length to avoid dependency cycle
 
-  // 2. Navigation Wake-up
+  // 1. Fetch on Auth success
   useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) fetchProjects();
-    };
-    window.addEventListener('pageshow', handlePageShow);
-    
-    // Periodically sync if status changes
     if (status === 'authenticated') {
-      fetchProjects();
+      console.log('Projects: Auth state changed to authenticated, fetching...');
+      fetchProjects(projects.length === 0);
     }
+  }, [status, fetchProjects]);
 
-    return () => window.removeEventListener('pageshow', handlePageShow);
-  }, [status]);
+  // 2. BFCache & History Wake-up
+  useEffect(() => {
+    const wakeUp = () => {
+      console.log('Projects: Wake-up event detected (pageshow/popstate)');
+      fetchProjects();
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log('Projects: Page restored from BFCache');
+        wakeUp();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Projects: Visibility changed to visible');
+        wakeUp();
+      }
+    };
+    
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('popstate', wakeUp);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('popstate', wakeUp);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchProjects]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -286,7 +316,7 @@ export default function ProjectsPage() {
                         {new Date(project.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                       </div>
                       
-                      <a
+                      <Link
                         href={project.latestAnalysis ? `/analysis?projectId=${project._id}` : `/upload?projectId=${project._id}`}
                         className={`flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full text-[11px] font-bold transition-all ${
                           project.latestAnalysis 
@@ -296,7 +326,7 @@ export default function ProjectsPage() {
                       >
                         {project.latestAnalysis ? 'Report' : 'Analyze'}
                         <ArrowRight className="w-3 h-3" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>
@@ -306,7 +336,7 @@ export default function ProjectsPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 border border-white/5 rounded-2xl bg-white/[0.01]">
-            {status === 'loading' && !isSyncing ? (
+            {(status === 'loading' || (isLoading && !initialLoadDone)) ? (
               <>
                 <Loader2 className="w-6 h-6 animate-spin text-white/10 mb-4" />
                 <p className="text-white/20 text-[10px] font-bold tracking-widest uppercase italic">Re-establishing Orbit</p>
@@ -320,6 +350,13 @@ export default function ProjectsPage() {
                 <p className="text-white/40 mb-6 max-w-xs mx-auto text-xs font-medium text-center">
                   Initialize your first project to begin.
                 </p>
+                {/* Fallback Sync Button if no projects showing */}
+                <button 
+                  onClick={() => fetchProjects(true)}
+                  className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Force Sync
+                </button>
               </>
             )}
           </div>

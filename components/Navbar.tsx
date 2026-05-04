@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 import { LogOut, LayoutDashboard, Menu, X } from 'lucide-react';
-import { useWaitlist } from './WaitlistContext';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
-  const { data: session, status } = useSession();
-  const { openWaitlist } = useWaitlist();
+  const { status } = useSession();
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -79,7 +79,7 @@ export function Navbar() {
               </div>
             ) : (
               <button
-                onClick={openWaitlist}
+                onClick={() => router.push('/projects')}
                 className="px-5 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm text-sm font-medium hover:bg-white/10 transition-all flex items-center gap-2"
               >
                 Get Started
@@ -133,7 +133,7 @@ export function Navbar() {
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      openWaitlist();
+                      router.push('/projects');
                     }}
                     className="w-full py-3 rounded-xl bg-white text-black text-center font-bold"
                   >

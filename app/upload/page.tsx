@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { UploadZone } from '@/components/UploadZone';
@@ -10,6 +11,7 @@ import { motion } from 'framer-motion';
 import { Code2, AlertCircle, Loader2 } from 'lucide-react';
 
 function UploadContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
   
@@ -91,7 +93,7 @@ function UploadContent() {
 
       // Redirect to analysis page
       setTimeout(() => {
-        window.location.href = '/analysis';
+        router.push('/analysis');
       }, 1000);
 
     } catch (error: any) {

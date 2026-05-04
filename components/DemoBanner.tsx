@@ -3,10 +3,14 @@
 import { AlertCircle, X } from 'lucide-react';
 import { useState } from 'react';
 
-export function DemoBanner() {
+interface DemoBannerProps {
+  show?: boolean;
+}
+
+export function DemoBanner({ show = false }: DemoBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
 
-  if (!isVisible) return null;
+  if (!isVisible || !show) return null;
 
   return (
     <div className="bg-amber-950/40 border border-amber-700/30 rounded-lg p-4 mb-6 flex items-start gap-3">

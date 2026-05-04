@@ -39,7 +39,6 @@ export const metadata: Metadata = {
 import { Providers } from '@/components/Providers'
 import { BackgroundEffect } from '@/components/BackgroundEffect'
 import { GlobalShortcuts } from '@/components/GlobalShortcuts'
-import { WaitlistModal } from '@/components/WaitlistModal'
 import { PageWrapper } from '@/components/PageWrapper'
 
 export default function RootLayout({
@@ -56,7 +55,6 @@ export default function RootLayout({
         <BackgroundEffect />
         <Providers>
           <GlobalShortcuts />
-          <WaitlistModal />
           <PageWrapper>
             {children}
           </PageWrapper>

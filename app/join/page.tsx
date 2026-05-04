@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,23 +16,41 @@ interface Job {
 }
 
 export default function JoinPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const [jobs, setJobs] = useState<Job[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const cached = localStorage.getItem('orbit_jobs_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [loading, setLoading] = useState(false);
+
+  const fetchJobs = async () => {
+    try {
+      const res = await fetch('/api/jobs');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setJobs(data);
+        localStorage.setItem('orbit_jobs_cache', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await fetch('/api/jobs');
-        const data = await res.json();
-        setJobs(data);
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-      } finally {
-        setLoading(false);
-      }
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) fetchJobs();
     };
+    window.addEventListener('pageshow', handlePageShow);
+
     fetchJobs();
-  }, []);
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [pathname]);
 
   const categories = ['Engineering', 'AI Research', 'Product Design', 'Customer Success', 'Marketing', 'Operations'];
   const jobsByCategory = (category: string) => jobs.filter(j => j.category === category);

@@ -30,11 +30,19 @@ export async function POST(req: NextRequest) {
     const owner = match[1];
     const repo = match[2].replace('.git', '');
 
-    // Fetch repository contents (recursively)
+    // 1. Fetch repository details to get the default branch
+    const { data: repoData } = await octokit.rest.repos.get({
+      owner,
+      repo,
+    });
+
+    const defaultBranch = repoData.default_branch;
+
+    // 2. Fetch repository contents using the default branch
     const { data: tree } = await octokit.rest.git.getTree({
       owner,
       repo,
-      tree_sha: 'main', // Assuming 'main' branch, should ideally check default branch
+      tree_sha: defaultBranch,
       recursive: 'true',
     });
 
@@ -62,7 +70,8 @@ export async function POST(req: NextRequest) {
       const isRelevantExtension = item.path.endsWith('.ts') || 
                                   item.path.endsWith('.tsx') || 
                                   item.path.endsWith('.js') || 
-                                  item.path.endsWith('.jsx');
+                                  item.path.endsWith('.jsx') ||
+                                  item.path.endsWith('.py');
       const isSkipped = skipPatterns.some(pattern => item.path.includes(pattern));
       
       return isFile && isRelevantExtension && !isSkipped;

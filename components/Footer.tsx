@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -13,25 +14,25 @@ export function Footer() {
           <div className="space-y-6">
             <h4 className="text-[14px] font-semibold text-white/90 tracking-wide uppercase">Company</h4>
             <ul className="space-y-3 text-[13px] text-white/40 font-medium">
-              <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
-              <li><a href="/join" className="hover:text-white transition-colors">Join Us</a></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
+              <li><Link href="/join" className="hover:text-white transition-colors">Join Us</Link></li>
             </ul>
           </div>
           <div className="space-y-6">
             <h4 className="text-[14px] font-semibold text-white/90 tracking-wide uppercase">Resources</h4>
             <ul className="space-y-3 text-[13px] text-white/40 font-medium">
-              <li><a href="/docs" className="hover:text-white transition-colors">Documentation</a></li>
-              <li><a href="/community" className="hover:text-white transition-colors">Community</a></li>
+              <li><Link href="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
+              <li><Link href="/community" className="hover:text-white transition-colors">Community</Link></li>
             </ul>
           </div>
           <div className="space-y-6">
             <h4 className="text-[14px] font-semibold text-white/90 tracking-wide uppercase">Legal</h4>
             <ul className="space-y-3 text-[13px] text-white/40 font-medium">
-              <li><a href="/legal/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="/legal/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="/legal/security" className="hover:text-white transition-colors">Security</a></li>
-              <li><a href="/legal/cookies" className="hover:text-white transition-colors">Cookie Policy</a></li>
-              <li><a href="/legal/license" className="hover:text-white transition-colors">License</a></li>
+              <li><Link href="/legal/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/legal/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/legal/security" className="hover:text-white transition-colors">Security</Link></li>
+              <li><Link href="/legal/cookies" className="hover:text-white transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/legal/license" className="hover:text-white transition-colors">License</Link></li>
             </ul>
           </div>
         </div>

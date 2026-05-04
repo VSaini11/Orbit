@@ -166,18 +166,18 @@ export function AnalysisExplorer({ items, type, repoUrl, projectName }: Analysis
                       <div className={`p-2 rounded-xl bg-opacity-20 ${severityColors[selectedItem.severity as keyof typeof severityColors].split(' ')[1]}`}>
                         <ShieldAlert className={`w-6 h-6 ${severityColors[selectedItem.severity as keyof typeof severityColors].split(' ')[0]}`} />
                       </div>
-                      <h2 className="text-2xl font-bold tracking-tight">{selectedItem.title}</h2>
+                      <h2 className="text-xl font-bold tracking-tight break-words">{selectedItem.title}</h2>
                     </div>
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {selectedItem.description}
                     </p>
-                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/5 text-primary rounded-full border border-primary/20">
-                    <Terminal className="w-3 h-3" />
-                    {selectedItem.file || 'root-file'}
+                <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-muted-foreground">
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/5 text-primary rounded-full border border-primary/20 max-w-full overflow-hidden">
+                    <Terminal className="w-3 h-3 shrink-0" />
+                    <span className="truncate break-all">{selectedItem.file || 'root-file'}</span>
                   </div>
                   {selectedItem.line && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full border border-border/50">
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-muted rounded-full border border-border/50 shrink-0">
                       Line {selectedItem.line}
                     </div>
                   )}
@@ -260,7 +260,7 @@ export function AnalysisExplorer({ items, type, repoUrl, projectName }: Analysis
                 </div>
 
                 {/* Bottom Actions */}
-                <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/30">
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-border/30">
                   <div className="flex gap-4">
                     <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
                       <MessageSquare className="w-4 h-4" /> Discuss with AI
@@ -269,7 +269,7 @@ export function AnalysisExplorer({ items, type, repoUrl, projectName }: Analysis
                       <ExternalLink className="w-4 h-4" /> View Docs
                     </button>
                   </div>
-                  <button className="px-6 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold border border-primary/20 hover:bg-primary hover:text-white transition-all">
+                  <button className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold border border-primary/20 hover:bg-primary hover:text-white transition-all">
                     Generate Pull Request
                   </button>
                 </div>

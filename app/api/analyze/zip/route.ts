@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         fileName.endsWith('.tsx') || 
         fileName.endsWith('.js') || 
         fileName.endsWith('.jsx') || 
+        fileName.endsWith('.py') || 
         fileName.endsWith('.css');
 
       if (isCodeFile) {

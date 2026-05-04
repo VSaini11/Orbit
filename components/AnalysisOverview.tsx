@@ -54,7 +54,7 @@ export function AnalysisOverview({ data }: AnalysisOverviewProps) {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-1 p-8 rounded-3xl border border-border bg-gradient-to-br from-card to-card/50 flex flex-col items-center justify-center relative overflow-hidden"
+        className="lg:col-span-1 p-6 md:p-8 rounded-3xl border border-border bg-gradient-to-br from-card to-card/50 flex flex-col items-center justify-center relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
         
@@ -87,8 +87,8 @@ export function AnalysisOverview({ data }: AnalysisOverviewProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl font-bold tracking-tighter">{healthScore}</span>
-            <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Grade A</span>
+            <span className="text-4xl font-bold tracking-tighter">{healthScore}</span>
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Orbit Grade</span>
           </div>
         </div>
         
@@ -102,10 +102,10 @@ export function AnalysisOverview({ data }: AnalysisOverviewProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="lg:col-span-2 p-8 rounded-3xl border border-border bg-card/50"
+        className="lg:col-span-2 p-5 md:p-8 rounded-3xl border border-border bg-card/50"
       >
-        <h3 className="text-lg font-medium text-muted-foreground mb-8">Analysis Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-6 md:mb-8">Analysis Summary</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-6">
           {categories.map((cat, i) => (
             <motion.div 
               key={cat.name}
@@ -114,11 +114,11 @@ export function AnalysisOverview({ data }: AnalysisOverviewProps) {
               transition={{ delay: 0.2 + i * 0.05 }}
               className="p-4 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 transition-all group"
             >
-              <div className={`w-10 h-10 ${cat.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                <cat.icon className={`w-5 h-5 ${cat.color}`} />
+              <div className={`w-8 h-8 md:w-10 md:h-10 ${cat.bg} rounded-lg md:rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                <cat.icon className={`w-4 h-4 md:w-5 md:h-5 ${cat.color}`} />
               </div>
-              <div className="text-2xl font-bold mb-1">{cat.count}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{cat.name}</div>
+              <div className="text-xl md:text-2xl font-bold mb-0.5 md:mb-1">{cat.count}</div>
+              <div className="text-[9px] md:text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{cat.name}</div>
               
               <div className="mt-3 w-full bg-muted/50 h-1 rounded-full overflow-hidden">
                 <motion.div 

@@ -2,6 +2,7 @@
 
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import Link from 'next/link';
 import { SystemCard } from '@/components/SystemCard';
 import { AnimatedGraph } from '@/components/AnimatedGraph';
 import { IDEAnimation } from '@/components/IDEAnimation';
@@ -28,10 +29,10 @@ const itemVariants = {
   },
 };
 
-import { useWaitlist } from '@/components/WaitlistContext';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { openWaitlist } = useWaitlist();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -62,7 +63,7 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-5 pt-8">
                 <button
-                  onClick={openWaitlist}
+                  onClick={() => router.push('/projects')}
                   className="pl-4 pr-5 py-2.5 rounded-full bg-[#0a0a0a] border border-white/10 text-white font-semibold hover:bg-white/5 transition-all hover:scale-[1.02] active:scale-95 inline-flex items-center gap-4 group"
                 >
                   <img src="/logo.png" alt="Orbit" className="w-6 h-6 object-contain" />
@@ -73,12 +74,12 @@ export default function Home() {
                     <span>J</span>
                   </div>
                 </button>
-                <a
+                <Link
                   href="/docs"
                   className="px-8 py-4 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-foreground font-bold hover:bg-white/10 transition-all inline-flex items-center justify-center text-[15px]"
                 >
                   View Documentation
-                </a>
+                </Link>
               </div>
             </motion.div>
           </motion.div>
@@ -148,18 +149,18 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <button
-                onClick={openWaitlist}
+                onClick={() => router.push('/projects')}
                 className="px-8 py-3 rounded-lg bg-white text-black font-semibold hover:bg-white/90 transition-all active:scale-95 inline-flex items-center justify-center gap-2"
               >
                 Get Started Free
                 <span>→</span>
               </button>
-              <a
+              <Link
                 href="/docs"
                 className="px-8 py-3 rounded-lg border border-border text-foreground font-medium hover:bg-card/50 transition-colors inline-flex items-center justify-center"
               >
                 Learn More
-              </a>
+              </Link>
             </div>
           </motion.div>
         </div>

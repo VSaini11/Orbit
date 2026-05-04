@@ -63,62 +63,81 @@ export function AdvancedIDE({
   // Simple syntax highlighting (regex based to avoid dependencies)
   const highlightCode = (code: string) => {
     if (!code) return '';
-    return code
+    
+    // 1. Escape HTML first
+    let text = code
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"(.*?)"/g, '<span class="text-green-400">"$1"</span>')
-      .replace(/'(.*?)'/g, '<span class="text-green-400">\'$1\'</span>')
-      .replace(/\b(const|let|var|function|return|if|else|for|while|import|export|from|await|async|try|catch|new|class|extends|interface|type|public|private)\b/g, '<span class="text-purple-400">$1</span>')
-      .replace(/\b(string|number|boolean|any|void|unknown|never|Promise)\b/g, '<span class="text-blue-400">$1</span>')
-      .replace(/\/\/(.*)/g, '<span class="text-muted-foreground italic">//$1</span>')
-      .replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>');
+      .replace(/>/g, "&gt;");
+
+    // 2. High-density coloring (ordered to prevent tag interference)
+    // We use placeholders for strings to avoid double-processing
+    const strings: string[] = [];
+    text = text.replace(/"(.*?)"/g, (m, p1) => {
+      const i = strings.length;
+      strings.push(`<span class="text-green-400">"${p1}"</span>`);
+      return `__STR_${i}__`;
+    });
+    
+    // Comments
+    text = text.replace(/(#|\/\/)(.*)/g, '<span class="text-muted-foreground italic">$1$2</span>');
+    
+    // Keywords
+    text = text.replace(/\b(const|let|var|function|return|if|else|for|while|import|export|from|await|async|try|catch|new|class|extends|interface|type|public|private|def|with|as|yield|lambda|pass|break|continue|None|True|False)\b/g, '<span class="text-purple-400">$1</span>');
+    
+    // Numbers (safe version without lookbehind)
+    text = text.replace(/\b(\d+)\b/g, (m) => `<span class="text-orange-400">${m}</span>`);
+    
+    // Restore strings
+    strings.forEach((s, i) => {
+      text = text.replace(`__STR_${i}__`, s);
+    });
+    
+    return text;
   };
 
   return (
     <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0e] shadow-2xl shadow-primary/10">
       {/* IDE Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a1c] border-b border-white/5">
-        <div className="flex items-center gap-4">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/50" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-            <div className="w-3 h-3 rounded-full bg-green-500/50" />
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-white/5 border border-white/10">
-            <Terminal className="w-3 h-3 text-primary" />
-            <span className="text-xs font-mono text-muted-foreground">{fileName}</span>
-          </div>
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#1a1a1c] border-b border-white/5">
+        <div className="flex gap-1.5 shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-            phase === 'refactoring' ? 'bg-primary/20 text-primary animate-pulse' : 
-            phase === 'complete' ? 'bg-green-500/20 text-green-400' : 
-            'bg-muted/50 text-muted-foreground'
+        <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-white/5 border border-white/10 max-w-[150px] md:max-w-xs overflow-hidden">
+          <Terminal className="w-3 h-3 text-primary shrink-0" />
+          <span className="text-[10px] font-mono text-muted-foreground truncate">{fileName}</span>
+        </div>
+        
+        <div className="flex items-center gap-2 shrink-0">
+          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-all ${
+            phase === 'refactoring' ? 'text-primary' : 
+            phase === 'complete' ? 'text-green-400' : 
+            'text-muted-foreground'
           }`}>
-            {phase === 'refactoring' && <Zap className="w-3 h-3" />}
+            {phase === 'refactoring' && <Zap className="w-3 h-3 animate-pulse" />}
             {phase === 'complete' && <ShieldCheck className="w-3 h-3" />}
-            {phase}
+            <span className="text-[9px] font-bold uppercase tracking-tighter hidden sm:inline">{phase}</span>
           </div>
           <button 
             onClick={handleCopy}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group"
-            title="Copy Fixed Code"
+            className="p-1 hover:bg-white/10 rounded transition-colors text-muted-foreground hover:text-foreground"
           >
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />}
+            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
           </button>
         </div>
       </div>
 
       {/* Code Area */}
-      <div className="relative p-6 font-mono text-sm leading-relaxed overflow-hidden min-h-[300px]">
+      <div className="relative p-4 font-mono text-[11px] md:text-xs leading-relaxed overflow-hidden min-h-[250px]">
         {/* Background Grid Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
              style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         
         <div className="relative z-10">
-          <pre className="whitespace-pre-wrap break-all">
+          <pre className="whitespace-pre-wrap break-words">
             <code 
               dangerouslySetInnerHTML={{ __html: highlightCode(displayText) }} 
               className="block"
@@ -153,14 +172,14 @@ export function AdvancedIDE({
       </div>
 
       {/* Footer Info */}
-      <div className="px-6 py-2 bg-white/[0.02] border-t border-white/5 flex justify-between items-center text-[10px] text-muted-foreground font-mono">
-        <div className="flex gap-4">
-          <span>UTF-8</span>
-          <span>{language.toUpperCase()}</span>
+      <div className="px-4 py-1.5 bg-white/[0.02] border-t border-white/5 flex justify-between items-center text-[9px] text-muted-foreground font-mono">
+        <div className="flex gap-3">
+          <span className="hidden xs:inline">UTF-8</span>
+          <span className="text-primary/60">{language.toUpperCase()}</span>
         </div>
-        <div className="flex items-center gap-2 text-primary/60">
-          <Zap className="w-3 h-3" />
-          Powered by Vyana Orbit AI
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse" />
+          <span>Vyana Engine 2.5</span>
         </div>
       </div>
     </div>
